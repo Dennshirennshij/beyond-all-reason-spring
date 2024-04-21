@@ -234,8 +234,57 @@ void CGameHelper::DamageObjectsInExplosionRadius(
 	//   which would overwrite our object cache if we did
 	//   not keep track of end-markers --> certain objects
 	//   would not be damaged AT ALL (!)
-	for (unsigned int n = oldNumUnits; n < newNumUnits; n++)
-		DoExplosionDamage(unitCache[n], params.owner, params.pos, expRad, params.explosionSpeed, params.edgeEffectiveness, params.ignoreOwner, params.damages, weaponDefID, params.projectileID);
+	for (unsigned int n = oldNumUnits; n < newNumUnits; n++) {
+    LOG_L(L_ERROR, "Checking unit %d", n);
+    // check if damage should be reduced
+    float deduction = 0.0f;
+    
+    // unit position
+    const float3& unitPos = unitCache[n]->midPos;
+    LOG_L(L_ERROR, "Unit %d position: %f %f %f", n, unitPos.x, unitPos.y, unitPos.z);
+    const float3 unitExpVec = unitPos - params.pos;
+    // Distance to explosion
+    float distance = unitExpVec.Length2D();
+    for (unsigned int other = oldNumUnits; other < newNumUnits; other++) {
+      LOG_L(L_ERROR, "Checking unit %d against unit %d", n, other);
+      // Skip if same unit
+      if (n == other) {
+        continue;
+      }
+      // Skip if other unit is further away
+      const float3& otherPos = unitCache[other]->midPos;
+      const float3 otherExpVec = otherPos - params.pos;
+      float otherDistance = otherExpVec.Length2D();
+      if (otherDistance > distance) {
+        LOG_L(L_ERROR, "Unit %d is further away than unit %d", other, n);
+        continue;
+      }
+      // Skip if too close to explosion
+      if (otherDistance < 1.0f) {
+        LOG_L(L_ERROR, "Unit %d is too close to explosion", n);
+        continue;
+      }
+      // angle between vectors
+      float dot = unitExpVec.dot(otherExpVec);
+      float angle = acos(dot / (distance * otherDistance));
+      // angle smaller or nan
+      if (angle < 0.385f || isnanl(angle)) {
+        LOG_L(L_ERROR, "DEDUCTION Unit %d is in the way of unit %d, because angle is %f", other, n, angle);
+        deduction += 1.0f;
+      } else {
+        LOG_L(L_ERROR, "Unit %d is not in the way of unit %d, because angle is %f", other, n, angle);
+      }
+    }
+    // unit definition
+    // const UnitDef* unitDef = unitCache[n]->unitDef;
+    // if (unitDef->IsBuildingUnit) {
+      // buildings are not affected by explosions
+      // continue;
+    // }
+
+    deduction = std::min(1.0f, deduction);
+		DoExplosionDamage(unitCache[n], params.owner, params.pos, expRad, params.explosionSpeed, params.edgeEffectiveness, params.ignoreOwner, params.damages * (1.0 - deduction), weaponDefID, params.projectileID);
+  }
 
 	unitCache.resize(oldNumUnits);
 
