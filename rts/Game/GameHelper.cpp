@@ -270,7 +270,7 @@ void CGameHelper::DamageObjectsInExplosionRadius(
       // angle smaller or nan
       if (angle < 0.385f || isnanl(angle)) {
         LOG_L(L_ERROR, "DEDUCTION Unit %d is in the way of unit %d, because angle is %f", other, n, angle);
-        deduction += 1.0f;
+        deduction += 0.5f;
       } else {
         LOG_L(L_ERROR, "Unit %d is not in the way of unit %d, because angle is %f", other, n, angle);
       }
