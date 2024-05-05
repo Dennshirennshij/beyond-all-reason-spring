@@ -236,7 +236,8 @@ void CGameHelper::DamageObjectsInExplosionRadius(
 	//   would not be damaged AT ALL (!)
 	for (unsigned int n = oldNumUnits; n < newNumUnits; n++) {
     // LOG_L(L_ERROR, "Checking unit %d", n);
-    // check if damage should be reduced
+
+    // Percentage of damage to be deducted
     float deduction = 0.0f;
     
     // unit position
@@ -244,17 +245,19 @@ void CGameHelper::DamageObjectsInExplosionRadius(
     // LOG_L(L_ERROR, "Unit %d position: %f %f %f", n, unitPos.x, unitPos.y, unitPos.z);
     const float3 unitExpVec = unitPos - params.pos;
     // Distance to explosion
-    float distance = unitExpVec.Length2D();
+    float distance = unitExpVec.Length();
     for (unsigned int other = oldNumUnits; other < newNumUnits; other++) {
       // LOG_L(L_ERROR, "Checking unit %d against unit %d", n, other);
+
       // Skip if same unit
       if (n == other) {
         continue;
       }
+
       // Skip if other unit is further away
       const float3& otherPos = unitCache[other]->midPos;
       const float3 otherExpVec = otherPos - params.pos;
-      float otherDistance = otherExpVec.Length2D();
+      float otherDistance = otherExpVec.Length();
       if (otherDistance > distance) {
         // LOG_L(L_ERROR, "Unit %d is further away than unit %d", other, n);
         continue;
@@ -267,8 +270,10 @@ void CGameHelper::DamageObjectsInExplosionRadius(
       // angle between vectors
       float dot = unitExpVec.dot(otherExpVec);
       float angle = acos(dot / (distance * otherDistance));
+      float radius = unitCache[n]->radius;
+      float compare = radius * (180 / 3.14159265) / otherDistance;
       // angle smaller or nan
-      if (angle < 0.385f || isnanl(angle)) {
+      if (angle < compare || isnanl(angle)) {
         // LOG_L(L_ERROR, "DEDUCTION Unit %d is in the way of unit %d, because angle is %f", other, n, angle);
         deduction += 0.5f;
       } else {
